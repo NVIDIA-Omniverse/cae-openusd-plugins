@@ -199,7 +199,7 @@ endfunction()
 #
 #   Development: <name>@<version>+[<variant>.]usd-<usd>.<pytag>.<platform>.g<sha>
 #   Release tag: <name>@<version>+[<variant>.]usd-<usd>.<pytag>.<platform>
-#   e.g. cae_openusd_plugins@0.1.1+openusd.usd-0.25.11.py312.linux-x86_64.g4a7a89c
+#   e.g. cae_openusd_plugins@0.1.2+openusd.usd-0.25.11.py312.linux-x86_64.g4a7a89c
 #
 # The name (CAE_PACKAGE_NAME) is the stable package identity; everything after
 # '@' is the variant qualifier, with the runtime axes carried as SemVer build

@@ -1,0 +1,11 @@
+{
+  "recent_releases": 4,
+  "retained_releases": ["25.11"],
+  "known_releases": ["25.11", "26.3", "26.5", "26.8"],
+  "builds": {
+    "25.11": {"openusd_tag": "v25.11", "linux_cxx11_abi": 0},
+    "26.3": {"openusd_tag": "v26.03", "linux_cxx11_abi": 1},
+    "26.5": {"openusd_tag": "v26.05", "linux_cxx11_abi": 1},
+    "26.8": {"openusd_tag": "v26.08", "linux_cxx11_abi": 1}
+  }
+}

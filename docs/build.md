@@ -1,7 +1,12 @@
 <!-- SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Build
+# Build from Source
+
+The published [PyPI package](installation.md#install-from-pypi) is the
+recommended installation path. Build from source when integrating with an
+application-supplied OpenUSD SDK, changing the enabled readers, or producing
+custom native packages.
 
 ## Prerequisites
 
@@ -92,26 +97,45 @@ for its targets, capability components, tool runtime, and limitations.
 
 ## Dependency Superbuild
 
-`cmake/superbuild/` can build a pinned dependency SDK and produce CMake initial
-cache files. It is a convenience for CI and reproducible developer builds; the
-top-level project remains the public build entry point.
+`cmake/superbuild/` builds a pinned dependency SDK and produces CMake initial
+cache files. The following example prepares the SDK for PyPI `usd-core==26.8`,
+including matching OpenUSD headers and all native file-format dependencies.
+Use an active CPython 3.12 environment with development headers and libraries,
+a C/C++ compiler, and Git. On Windows, use a Visual Studio developer shell so
+MSVC is available.
+
+Run from the repository root (POSIX shell syntax):
 
 ```sh
-cmake -P cmake/ci/setup.cmake
-cmake -DCAE_USD_FLAVOR=openusd -DCAE_USD_VERSION=25.11 \
-  -P cmake/ci/superbuild.cmake
+python -m pip install cmake ninja
+cmake -S cmake/superbuild -B build-sdk -G Ninja \
+  -DCAE_SUPERBUILD_USD_FLAVOR=usd-core \
+  -DCAE_SUPERBUILD_USDCORE_VERSION=26.8 \
+  -DCAE_SUPERBUILD_OPENUSD_TAG=v26.08 \
+  -DCAE_SUPERBUILD_CXX11_ABI=1 \
+  -DCAE_SUPERBUILD_PYTHON_EXECUTABLE="$(python -c 'import sys; print(sys.executable)')"
+cmake --build build-sdk --target cae-sdk --parallel 4
 
-cmake -S . -B build-sdk -G Ninja \
-  -C _build/sdk/cae-format-sdk-cache.cmake \
-  -C _build/sdk_usd/cae-usd-sdk-cache.cmake \
+cmake -S . -B build -G Ninja \
+  -C build-sdk/sdk/cae-format-sdk-cache.cmake \
+  -C build-sdk/sdk_usd/cae-usd-sdk-cache.cmake \
+  -DPython3_EXECUTABLE="$(python -c 'import sys; print(sys.executable)')" \
   -DCMAKE_BUILD_TYPE=Release
-cmake --build build-sdk --parallel
+cmake --build build --parallel 4
 ```
 
-The maintained matrix covers source OpenUSD 25.02 and 25.11 plus PyPI
-`usd-core` 25.11 and 26.05. See
-[`cmake/superbuild/README.md`](../cmake/superbuild/README.md) for the generated
-SDK layout and advanced options.
+In PowerShell, use backticks for line continuations. Keep the same Python
+interpreter active for both stages. The Linux C++ ABI setting has no effect with
+MSVC; it must match the selected `usd-core` release on Linux. USD 25.11 uses
+ABI 0; 26.3, 26.5, and 26.8 use ABI 1. Consult the frozen
+[`usd-core-support.json`](../cmake/usd-core-support.json) for each release's
+source tag and ABI; use a separate build directory when changing SDKs.
+
+The first build prepares dependencies; the second builds the plugins. To make a
+wheel instead of a CMake install, use the generated caches with the
+[local wheel-build recipe](installation.md#build-a-wheel-locally).
+See [`cmake/superbuild/README.md`](../cmake/superbuild/README.md) for source-built
+OpenUSD, format-only SDKs, generated layouts, and advanced options.
 
 ## Next Steps
 

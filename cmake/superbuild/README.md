@@ -6,51 +6,32 @@
 This directory owns the optional dependency SDK builder. The main project stays
 plain CMake and continues to consume dependencies through `find_package()`.
 
-The superbuild is for CI and developer convenience when a matrix row needs a
-known SDK prefix. The normal top-level project remains the public build entry
-point; this directory only prepares dependency roots and CMake initial-cache
-handoff files.
+Use the [build guide](../../docs/build.md#dependency-superbuild) for a complete
+local `usd-core` SDK and plugin build. The normal top-level project consumes
+the SDK; this directory prepares dependency roots and CMake initial-cache files.
+It downloads dependencies from public upstream repositories and PyPI.
 
-```bash
-cmake -P cmake/ci/setup.cmake
-cmake -DCAE_USD_FLAVOR=openusd -DCAE_USD_VERSION=25.11 \
-  -P cmake/ci/superbuild.cmake
-cmake -DCAE_USD_FLAVOR=openusd -DCAE_USD_VERSION=25.11 \
-  -P cmake/ci/build.cmake
-```
+With `cmake -S cmake/superbuild -B build-sdk`, the default SDK prefixes are:
 
-By default, `superbuild.cmake` keeps build scratch under `_build/superbuild`,
-writes file-format dependencies under `_build/sdk`, and writes the USD provider
-under `_build/sdk_usd`. The generated cache files live with the prefixes they
-describe:
+- `build-sdk/sdk/`: static file-format dependencies and `cae-format-sdk-cache.cmake`;
+- `build-sdk/sdk_usd/`: the USD SDK and `cae-usd-sdk-cache.cmake`.
 
-- `_build/sdk/cae-format-sdk-cache.cmake`
-- `_build/sdk_usd/cae-usd-sdk-cache.cmake`
-
-The CI scripts always configure with Ninja. Build steps normally let Ninja
-choose its own parallelism. Set `OMNI_REPO_BUILD_JOBS` only for matrix rows that
-need a memory cap; `superbuild.cmake` forwards it to
-`CMAKE_BUILD_PARALLEL_LEVEL` and to source OpenUSD's `build_usd.py --jobs`.
-`build.cmake` emits one package and one wheel from the generated SDK caches.
-Static file-format dependencies are the default, so package identity does not
-encode dependency bundling.
+Build the `cae-sdk` target to prepare both prefixes and write the cache files.
+Pass those files to the top-level CMake configure with `-C`, or use them with
+[the local wheel builder](../../docs/installation.md#build-a-wheel-locally).
+The `CMAKE_BUILD_PARALLEL_LEVEL` environment variable limits CMake dependency
+builds. For source OpenUSD, `CAE_SUPERBUILD_BUILD_PARALLEL_LEVEL` controls
+`build_usd.py --jobs`.
 
 ## File Map
 
 - `CMakeLists.txt`: declares the dependency graph and writes the format/USD
   cache files into their SDK prefixes.
-- `scripts/build_openusd_sdk.cmake`: adapts the source OpenUSD matrix row to
-  `build_usd.py`.
+- `scripts/build_openusd_sdk.cmake`: invokes source OpenUSD's `build_usd.py`.
+- `scripts/prepare_usdcore_sdk.py`: prepares a compile SDK from PyPI `usd-core`
+  and matching public source headers.
 - `scripts/ensure_python_packages.cmake`: installs isolated Python packages
   used by OpenUSD build steps and by the generated test SDK.
-- `../ci/setup.cmake`: downloads the CI Python profile and installs CMake/Ninja.
-- `../ci/superbuild.cmake`: CMake script-mode entry point for dependency SDK
-  artifacts.
-- `../ci/build.cmake`: CMake script-mode entry point for consuming an SDK cache
-  and building the project, CPack package, and wheel artifacts.
-- `../ci/test_wheel.cmake`: CMake script-mode entry point for testing a wheel
-  in a fresh virtual environment with normal pip dependency resolution.
-- `../ci/common.cmake`: shared helpers for CMake script-mode drivers.
 
 ## USD Flavor
 
@@ -60,8 +41,7 @@ monolithic linkage by itself; that should be a separate OpenUSD build option if
 we need source-built monolithic OpenUSD later.
 
 - `openusd`: build an OpenUSD SDK from source with `build_usd.py`. The current
-  implementation builds the split-library flavor used by the Kit/Packman
-  runtime compatibility experiments.
+  implementation builds a split-library SDK.
 - `usd-core`: prepare the build-only SDK shim for PyPI `usd-core`. This targets
   the runtime layout and ABI of the `usd-core` wheel; it is not just a generic
   "monolithic OpenUSD" source build.
@@ -70,12 +50,14 @@ To build only the file-format dependency SDK and leave USD to the normal
 top-level consumer workflow, configure the superbuild with
 `CAE_SUPERBUILD_ENABLE_USD=OFF`.
 
-The CI matrix currently supports:
+The frozen [`usd-core-support.json`](../usd-core-support.json) manifest defines
+USD build tags and Linux C++ ABI settings. USD 25.11 uses ABI 0; 26.3, 26.5,
+and 26.8 use ABI 1. Validated SDK configurations include:
 
 | Flavor | Versions | Notes |
 |---|---|---|
-| `openusd` | `25.02`, `25.11` | Source-built split SDK, wheel-tested against the matching Kit/Packman runtime. |
-| `usd-core` | `25.11`, `26.05` | Build-only compile shim, wheel-tested in a fresh venv that installs matching PyPI `usd-core`. |
+| `openusd` | `25.02`, `25.11` | Source-built split-library SDK. |
+| `usd-core` | `25.11`, `26.3`, `26.5`, `26.8` | Build-only compile shims; the combined wheel is tested with each matching PyPI runtime. |
 
 `usd-core` `25.02` is intentionally not in the supported matrix because the
 current shim path targets the monolithic runtime layout covered by the rows
@@ -136,7 +118,7 @@ uses that entry as `PXR_USD_WINDOWS_DLL_PATH` so `pxr.Tf` imports modules such
 as `_tf.pyd` without searching unrelated dependency directories.
 
 `CAE_TEST_RUNTIME_PYTHONPATH` is also consumed by the normal CTest helpers. It
-keeps test-only Python packages out of the CI bootstrap environment and makes
+keeps test-only Python packages out of the active build environment and makes
 the generated SDK describe the full local test runtime.
 
 The CTest helpers prepend the staged install paths and these cache-provided
@@ -148,41 +130,39 @@ The CTest helpers do not infer external USD or Python runtime paths from
 test runtime variables when they are part of the generated SDK; custom SDK
 users should pass the same variables explicitly.
 
-## Example Matrix Rows
+## Additional SDK Examples
 
-Source OpenUSD SDK for a Packman-runtime validation lane:
+Source OpenUSD 25.11 SDK, using the active Python interpreter:
 
-```bash
-cmake -DCAE_USD_FLAVOR=openusd -DCAE_USD_VERSION=25.11 \
-  -P cmake/ci/superbuild.cmake
+```sh
+cmake -S cmake/superbuild -B build-sdk-openusd -G Ninja \
+  -DCAE_SUPERBUILD_USD_FLAVOR=openusd \
+  -DCAE_SUPERBUILD_OPENUSD_TAG=v25.11 \
+  -DCAE_SUPERBUILD_PYTHON_EXECUTABLE="$(python -c 'import sys; print(sys.executable)')" \
+  -DCAE_SUPERBUILD_BUILD_PARALLEL_LEVEL=4
+cmake --build build-sdk-openusd --target cae-sdk --parallel 4
 ```
 
-PyPI `usd-core` compile shim:
-
-```bash
-cmake -DCAE_USD_FLAVOR=usd-core -DCAE_USD_VERSION=26.05 \
-  -P cmake/ci/superbuild.cmake
-```
+These examples use POSIX shell syntax; in PowerShell, use backticks for line
+continuations. Source-built OpenUSD is a separate runtime from PyPI `usd-core`;
+plugins built with it need that source-built runtime. Use the `usd-core` example
+in the [build guide](../../docs/build.md#dependency-superbuild) for PyPI runtimes.
 
 Format dependency SDK only, with USD supplied later by the normal top-level
 consumer build:
 
 ```bash
-cmake -S cmake/superbuild -B _build/format-deps-sdk -G Ninja \
-  -DCAE_SUPERBUILD_ENABLE_USD=OFF \
-  -DCAE_SUPERBUILD_FORMAT_DEPS_INSTALL_PREFIX=$PWD/_build/sdk
-cmake --build _build/format-deps-sdk --target cae-sdk
+cmake -S cmake/superbuild -B build-format-sdk -G Ninja \
+  -DCAE_SUPERBUILD_ENABLE_USD=OFF
+cmake --build build-format-sdk --target cae-sdk --parallel 4
 ```
 
 ## Review Notes
 
 The main project should not be included from this directory. Keeping the SDK
-builder separate preserves the default external-dependency workflow and keeps CI
-USD matrix rows explicit.
+builder separate preserves the default external-dependency workflow and keeps
+USD configurations explicit.
 
 The generated cache file is intentionally small. If a new dependency needs a
 main-build option, add it to the cache handoff rather than making the top-level
 project infer that it came from the superbuild.
-
-Packman compatibility should be validated in runtime test jobs, not encoded as
-a Packman build dependency here.

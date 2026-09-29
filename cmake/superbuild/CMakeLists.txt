@@ -99,7 +99,7 @@ set(CAE_SUPERBUILD_PYTHON_EXECUTABLE "" CACHE FILEPATH
 
 set(CAE_SUPERBUILD_PUGIXML_REPOSITORY "https://github.com/zeux/pugixml.git" CACHE STRING
     "pugixml Git repository")
-set(CAE_SUPERBUILD_PUGIXML_TAG "v1.15" CACHE STRING
+set(CAE_SUPERBUILD_PUGIXML_TAG "v1.16" CACHE STRING
     "pugixml Git tag")
 set(CAE_SUPERBUILD_LZ4_REPOSITORY "https://github.com/lz4/lz4.git" CACHE STRING
     "LZ4 Git repository")
@@ -111,11 +111,11 @@ set(CAE_SUPERBUILD_ZLIB_TAG "v1.3.2" CACHE STRING
     "zlib Git tag")
 set(CAE_SUPERBUILD_XZ_REPOSITORY "https://github.com/tukaani-project/xz.git" CACHE STRING
     "XZ Utils / liblzma Git repository")
-set(CAE_SUPERBUILD_XZ_TAG "v5.8.3" CACHE STRING
+set(CAE_SUPERBUILD_XZ_TAG "v5.8.4" CACHE STRING
     "XZ Utils / liblzma Git tag")
 set(CAE_SUPERBUILD_HDF5_REPOSITORY "https://github.com/HDFGroup/hdf5.git" CACHE STRING
     "HDF5 Git repository")
-set(CAE_SUPERBUILD_HDF5_TAG "2.1.1" CACHE STRING
+set(CAE_SUPERBUILD_HDF5_TAG "2.2.0" CACHE STRING
     "HDF5 Git tag")
 set(CAE_SUPERBUILD_CGNS_REPOSITORY "https://github.com/CGNS/CGNS.git" CACHE STRING
     "CGNS Git repository")

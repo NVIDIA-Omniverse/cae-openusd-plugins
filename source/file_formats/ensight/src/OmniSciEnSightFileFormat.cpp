@@ -361,6 +361,31 @@ static std::string Trim(const std::string& value)
     return TfStringTrim(value);
 }
 
+// Collapse runs of internal whitespace to a single space so that case-file
+// header lines like "type:  ensight gold" (two spaces, as written by some
+// exporters) compare equal to the canonical single-space form.
+static std::string NormalizeWhitespace(const std::string& value)
+{
+    std::string result;
+    result.reserve(value.size());
+    bool prevSpace = false;
+    for (char ch : value)
+    {
+        if (std::isspace(static_cast<unsigned char>(ch)))
+        {
+            if (!prevSpace && !result.empty())
+                result += ' ';
+            prevSpace = true;
+        }
+        else
+        {
+            result += ch;
+            prevSpace = false;
+        }
+    }
+    return result;
+}
+
 static std::string ReadFixedString(std::istream& stream, size_t size)
 {
     std::string buffer(size, '\0');
@@ -557,7 +582,8 @@ static ReadOptions ParseReadOptions(const std::string& fname, const SdfLayer::Fi
 
 static bool IsSectionHeader(std::string_view text)
 {
-    return text == "FORMAT" || text == "GEOMETRY" || text == "VARIABLE" || text == "TIME" || text == "FILE";
+    return text == "FORMAT" || text == "GEOMETRY" || text == "VARIABLE" || text == "TIME" || text == "FILE" ||
+           text == "SCRIPTS";
 }
 
 static std::optional<std::string> ReadCaseLine(std::istream& stream)
@@ -633,7 +659,8 @@ static CaseInfo ParseCaseFile(const std::string& filePath, const SdfLayer::FileF
 
     const std::optional<std::string> formatLine = ReadCaseLine(input);
     const std::optional<std::string> typeLine = ReadCaseLine(input);
-    if (!formatLine || !typeLine || *formatLine != "FORMAT" || ToLower(*typeLine) != "type: ensight gold")
+    if (!formatLine || !typeLine || *formatLine != "FORMAT" ||
+        NormalizeWhitespace(ToLower(*typeLine)) != "type: ensight gold")
     {
         TF_RUNTIME_ERROR("OmniSciEnSightFileFormat: '%s' is not a valid EnSight Gold case file.", filePath.c_str());
         return {};
@@ -1885,8 +1912,8 @@ bool OmniSciEnSightFileFormat::CanRead(const std::string& filePath) const
         return false;
     const std::optional<std::string> formatLine = detail::ReadCaseLine(input);
     const std::optional<std::string> typeLine = detail::ReadCaseLine(input);
-    const bool result =
-        formatLine && typeLine && *formatLine == "FORMAT" && detail::ToLower(*typeLine) == "type: ensight gold";
+    const bool result = formatLine && typeLine && *formatLine == "FORMAT" &&
+                        detail::NormalizeWhitespace(detail::ToLower(*typeLine)) == "type: ensight gold";
     TF_DEBUG(CAE_ENSIGHT_FILEFORMAT)
         .Msg("OmniSciEnSightFileFormat::CanRead('%s') -> %d format='%s' type='%s'\n", filePath.c_str(), result ? 1 : 0,
              formatLine ? formatLine->c_str() : "", typeLine ? typeLine->c_str() : "");

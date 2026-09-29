@@ -163,7 +163,7 @@ ABI they were built against. Direct shared dependencies may be bundled into
 archives when explicitly configured; statically linked dependencies are
 already part of the plugin libraries.
 
-See [Build](build.md) and [Installation and packaging](installation.md).
+See [Build from source](build.md) and [Installation](installation.md).
 
 ## Repository Map
 

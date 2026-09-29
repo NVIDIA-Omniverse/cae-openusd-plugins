@@ -32,6 +32,8 @@ import os
 from pathlib import Path
 import warnings
 
+from ._variants import runtime_root
+
 _PACKAGE_ROOT = Path(__file__).resolve().parent
 _WHEEL_RUNTIME_ROOT = _PACKAGE_ROOT / "_runtime"
 
@@ -61,9 +63,6 @@ def _resolve_runtime_root() -> Path:
 
 
 _RUNTIME_ROOT = _resolve_runtime_root()
-_USD_PLUGIN_PATH = _RUNTIME_ROOT / "plugin" / "usd"
-_PXR_PACKAGE_PATH = _RUNTIME_ROOT / "lib" / "python" / "pxr"
-_METADATA_PATH = _RUNTIME_ROOT / "cae-package-metadata.env"
 
 _DLL_DIRECTORY_HANDLES = []
 _DLL_DIRECTORY_PATHS = set()
@@ -88,11 +87,11 @@ def package_root() -> Path:
 def install_root() -> Path:
     """Return the active CMake install tree root.
 
-    In a wheel this is the private ``cae_openusd_plugins/_runtime`` directory. In
+    In a combined wheel this is the selected directory under ``_runtime``. In
     a CMake install tree this is the install prefix.
     """
 
-    return _RUNTIME_ROOT
+    return runtime_root(_RUNTIME_ROOT)
 
 
 def internal_root() -> Path:
@@ -102,7 +101,7 @@ def internal_root() -> Path:
     where the payload lives under ``_runtime``.
     """
 
-    return _RUNTIME_ROOT
+    return runtime_root(_RUNTIME_ROOT)
 
 
 def usd_plugin_path() -> Path:
@@ -112,13 +111,13 @@ def usd_plugin_path() -> Path:
     registration manually. Most callers should use :func:`register_usd_plugins`.
     """
 
-    return _USD_PLUGIN_PATH
+    return install_root() / "plugin" / "usd"
 
 
 def pxr_package_path() -> Path:
     """Return this package's ``pxr`` namespace extension directory."""
 
-    return _PXR_PACKAGE_PATH
+    return install_root() / "lib" / "python" / "pxr"
 
 
 def package_metadata() -> dict[str, str]:
@@ -129,7 +128,7 @@ def package_metadata() -> dict[str, str]:
     ``CAE_PACKAGE_PLATFORM`` when available.
     """
 
-    return _read_metadata_file(_METADATA_PATH)
+    return _read_metadata_file(install_root() / "cae-package-metadata.env")
 
 
 def expected_openusd_version() -> str | None:
@@ -155,7 +154,11 @@ def check_runtime(*, raise_on_error: bool = False, strict_version: bool = True) 
         a human-readable message.
     """
 
-    expected = expected_openusd_version()
+    try:
+        expected = expected_openusd_version()
+    except RuntimeError as exc:
+        result = RuntimeCheckResult(False, None, None, str(exc))
+        return _maybe_raise_runtime_error(result, raise_on_error, exc)
 
     try:
         from pxr import Usd
@@ -255,7 +258,8 @@ def register_usd_plugins(*, update_environment: bool = True, strict_version: boo
 def _extend_pxr_namespace() -> None:
     """Let the active OpenUSD ``pxr`` package see our generated subpackages."""
 
-    if not _PXR_PACKAGE_PATH.is_dir():
+    package_path = pxr_package_path()
+    if not package_path.is_dir():
         return
 
     try:
@@ -270,7 +274,7 @@ def _extend_pxr_namespace() -> None:
     if pxr_path is None:
         raise RuntimeError("The imported pxr module is not a package and cannot be extended.")
 
-    _append_unique_path(pxr_path, _PXR_PACKAGE_PATH)
+    _append_unique_path(pxr_path, package_path)
 
 
 def _add_windows_dll_directories(plugin_path: Path) -> None:

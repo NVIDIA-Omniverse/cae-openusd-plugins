@@ -13,7 +13,7 @@ The repository includes the format-agnostic `OmniSci` schemas, domain schemas
 for formats such as CGNS, OpenFOAM, VTK, EnSight, EDEM, FLASH AMR, and Eclipse
 reservoir data, and readers for both native and Python-backed formats.
 
-> **Project status:** The current public release is `0.1.1`. Its
+> **Project status:** The current release is `0.1.2`. Its
 > readers and schemas intentionally cover selected concepts from each source
 > domain; they are not complete implementations of those formats or standards.
 > See the [supported formats](docs/file_formats/README.md) and [Conceptual Data
@@ -22,41 +22,16 @@ reservoir data, and readers for both native and Python-backed formats.
 
 ## Quick Start
 
-Configure with an OpenUSD installation and the dependencies required by the
-enabled readers:
+Install the published package from
+[PyPI](https://pypi.org/project/cae-openusd-plugins/):
 
 ```sh
-cmake -S . -B build \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_PREFIX_PATH=/path/to/usd-and-dependencies
-cmake --build build --parallel
-cmake --install build --prefix "$PWD/install"
+python -m pip install cae-openusd-plugins
 ```
 
-File-format plugins that do not require external native dependencies are
-enabled by default. The VTK reader is also enabled by default and requires
-pugixml, LZ4, zlib, and liblzma. CGNS, EDEM, and FLASH AMR require additional
-libraries and are disabled by default. See the [build guide](docs/build.md) for
-prerequisites, feature switches, and the dependency superbuild.
-
-To make the installed file formats available in an application built against a
-compatible OpenUSD version, add the plugin directory to
-`PXR_PLUGINPATH_NAME` before launching the application:
-
-```sh
-export PXR_PLUGINPATH_NAME="$PWD/install/plugin/usd${PXR_PLUGINPATH_NAME:+:$PXR_PLUGINPATH_NAME}"
-```
-
-OpenUSD applications launched from that environment can then open supported
-assets through their normal file-opening workflows. For Python applications
-using a CMake install, add the installed package to `PYTHONPATH`. A normally
-installed Python wheel does not require this manual path setup. In either case,
-the registration helper validates the active OpenUSD version, registers the
-plugin tree, and exposes the generated schema modules:
-
-```sh
-export PYTHONPATH="$PWD/install/lib/python${PYTHONPATH:+:$PYTHONPATH}"
-```
+Pip installs a supported `usd-core` runtime and the default Python reader
+dependencies. Register the plugins before importing OpenUSD so the matching
+native payload and generated schemas are available to the process:
 
 ```python
 import cae_openusd_plugins
@@ -74,13 +49,16 @@ stage = Usd.Stage.Open("simulation.vtu")
 print(stage.GetDefaultPrim().GetPath())
 ```
 
+Published wheels support CPython 3.12 on Windows x86-64 and Linux x86-64 with
+glibc 2.35 or newer. See [Installation](docs/installation.md) for supported
+OpenUSD versions, platform details, and version pinning.
+
 ## Documentation
 
 ### Getting Started
 
-- [Build](docs/build.md) — prerequisites, CMake options, and dependency SDKs.
-- [Installation and packaging](docs/installation.md) — install trees, CPack,
-  and Python wheels.
+- [Installation](docs/installation.md) — PyPI quickstart, supported platforms,
+  OpenUSD versions, and advanced packaging.
 - [Using the plugins](docs/usage.md) — registration, native assets, payloads,
   and file-format arguments.
 - [Testing](docs/testing.md) — CTest, pytest, and installed-tree validation.
@@ -122,6 +100,8 @@ print(stage.GetDefaultPrim().GetPath())
 
 - [Repository architecture](docs/architecture.md) — schema, reader, runtime,
   and packaging boundaries.
+- [Build from source](docs/build.md) — prerequisites, CMake options, and
+  dependency SDKs.
 - [Glossary](docs/glossary.md) — terminology used throughout the project.
 - [Add a schema](docs/development/adding_a_schema.md) — define, register, test,
   and document a schema plugin.

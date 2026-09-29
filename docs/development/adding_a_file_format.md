@@ -209,7 +209,6 @@ cmake -S . -B build -DCAE_ENABLE_EXAMPLE=ON
 cmake --build build --parallel
 ctest --test-dir build -R '^test_example_fileformat$' --output-on-failure
 ctest --test-dir build --output-on-failure
-python3 tools/ci/check_oss_compliance.py
 git diff --check
 ```
 

@@ -12,6 +12,7 @@ pytest.importorskip("pxr.OmniSciEnSight", reason="omniSciEnSight plugin not avai
 
 _DATA_DIR = pathlib.Path(__file__).parent.parent.parent / "data" / "EnSight"
 _DISK_OUT = _DATA_DIR / "disk_out_ref.0.case"
+_DISK_OUT_ENCAS = _DATA_DIR / "disk_out_ref.0.encas"
 _NFACED = _DATA_DIR / "multicomb_o_nfaced.0.case"
 _MIXED = _DATA_DIR / "disk_out_ref_mixed.0.case"
 
@@ -217,3 +218,64 @@ def test_mixed_case_loads_node_and_element_vectors(mixed_stage):
     assert len(elem_values) > 0
     assert len(node_values[0]) == 3
     assert len(elem_values[0]) == 3
+
+
+# ---------------------------------------------------------------------------
+# .encas extension + whitespace-tolerant "type:" header tests
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def encas_stage():
+    """Open the .encas variant of disk_out_ref — exercises the alias extension
+    and the whitespace-tolerant 'type:  ensight gold' header (two spaces)."""
+    if not _DISK_OUT_ENCAS.exists():
+        pytest.skip("EnSight .encas test data not found")
+    if not _ensight_available():
+        pytest.skip("OmniSciEnSightFileFormat plugin not registered")
+    stage = Usd.Stage.Open(str(_DISK_OUT_ENCAS))
+    assert stage, f"Failed to open {_DISK_OUT_ENCAS}"
+    return stage
+
+
+@pytest.mark.integration
+def test_encas_extension_opens(encas_stage):
+    """The plugin must open .encas files (the 'encas' alias extension)."""
+    assert encas_stage is not None
+
+
+@pytest.mark.integration
+def test_encas_can_read_returns_true():
+    """CanRead must accept .encas files even when the type line has extra
+    internal whitespace ('type:  ensight gold' with two spaces)."""
+    if not _DISK_OUT_ENCAS.exists():
+        pytest.skip("EnSight .encas test data not found")
+    if not _ensight_available():
+        pytest.skip("OmniSciEnSightFileFormat plugin not registered")
+    fmt = Sdf.FileFormat.FindById("OmniSciEnSightFileFormat")
+    assert fmt is not None
+    assert fmt.CanRead(str(_DISK_OUT_ENCAS))
+
+
+@pytest.mark.integration
+def test_encas_default_prim_is_filename_stem(encas_stage):
+    """Default prim should be derived from the .encas file's stem, not the
+    primary 'case' extension."""
+    default_prim = encas_stage.GetDefaultPrim()
+    assert default_prim
+    assert default_prim.GetPath() == Sdf.Path(f"/{_root_name(_DISK_OUT_ENCAS)}")
+
+
+@pytest.mark.integration
+def test_encas_coordinates_load(encas_stage):
+    """Coordinates must be readable through the .encas entry point."""
+    part = _first_part(encas_stage, _root_name(_DISK_OUT_ENCAS))
+    x = part.GetAttribute("omni:sci:array:coordinatesX:value").Get(Usd.TimeCode.EarliestTime())
+    assert x is not None and len(x) > 0
+
+
+@pytest.mark.integration
+def test_encas_field_loads(encas_stage):
+    """Scalar field data must load when the file is opened via .encas."""
+    part = _first_part(encas_stage, _root_name(_DISK_OUT_ENCAS))
+    values = part.GetAttribute("omni:sci:array:Temp_n:value").Get(Usd.TimeCode.EarliestTime())
+    assert values is not None and len(values) > 0

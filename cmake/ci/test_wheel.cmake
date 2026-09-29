@@ -71,18 +71,22 @@ if(NOT EXISTS "${_venv_python}")
     message(FATAL_ERROR "Virtualenv Python was not created: ${_venv_python}")
 endif()
 
+set(_usd_requirement)
+if(_usd_flavor STREQUAL "usd-core")
+    list(APPEND _usd_requirement "usd-core==${_usd_version}")
+endif()
 cae_ci_run("Install wheel under test"
     COMMAND "${_venv_python}" -m pip install
         --disable-pip-version-check
         pytest
-        "${_wheel}")
+        "${_wheel}" ${_usd_requirement})
 
 string(CONCAT _metadata_check
     "import importlib.metadata as md; "
     "from pathlib import Path; "
     "import cae_openusd_plugins as p; "
     "root = p.install_root(); "
-    "assert root.name == '_runtime', root; "
+    "assert root.name == '_runtime' or root.parent.name == '_runtime', root; "
     "assert (root / 'plugin' / 'usd' / 'plugInfo.json').is_file(), root; "
     "assert (root / 'cae-package-metadata.env').is_file(), root; "
     "requires = md.requires('cae-openusd-plugins') or []; "
@@ -94,7 +98,10 @@ string(CONCAT _metadata_check
 )
 if(_usd_flavor STREQUAL "usd-core")
     string(APPEND _metadata_check
-        "; assert any(r.split(';', 1)[0].strip() == 'usd-core==${_usd_version}' for r in requires), requires")
+        "; import json; "
+        "manifest = json.loads((root.parent / 'variants.json').read_text()); "
+        "assert md.version('usd-core') in manifest['variants']; "
+        "assert root.name == manifest['variants'][md.version('usd-core')]['directory']")
 endif()
 
 cae_ci_run("Check wheel runtime layout and metadata"
@@ -106,11 +113,18 @@ cae_ci_run("Install benchmark project"
         --no-deps
         "${_repo_root}/tools/benchmarks")
 
+set(_wheel_tests)
+if(_usd_flavor STREQUAL "usd-core")
+    list(APPEND _wheel_tests "${_repo_root}/tests/wheel")
+    set(ENV{CAE_FLASH_TEST_DATA_DIR} "${_artifact_dir}/test-data/FLASH")
+endif()
+cae_ci_run("Check installed dependencies"
+    COMMAND "${_venv_python}" -m pip check)
 cae_ci_run("Run wheel pytest suite"
     RUNTIME_PYTHONPATH ${_runtime_pythonpath}
     RUNTIME_PATH ${_runtime_path}
     COMMAND "${_venv_python}" -m pytest
-        "${_repo_root}/tests/python"
+        "${_repo_root}/tests/python" ${_wheel_tests}
         -v
         --tb=short)
 

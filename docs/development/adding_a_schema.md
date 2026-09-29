@@ -126,7 +126,6 @@ cmake -S . -B build
 cmake --build build --parallel
 ctest --test-dir build -R '^test_omni_sci_example$' --output-on-failure
 ctest --test-dir build --output-on-failure
-python3 tools/ci/check_oss_compliance.py
 git diff --check
 ```
 

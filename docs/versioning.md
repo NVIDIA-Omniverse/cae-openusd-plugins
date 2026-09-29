@@ -5,14 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 # Versioning and releases
 
-The `main` branch carries ongoing development. Long-lived release trains use
-`release/v<major>`, beginning with `release/v0`. CI publishes the filtered
-public snapshot of each branch to its matching `github/<branch>` branch, so
-`release/v0` updates `github/release/v0`.
-
-Development builds use PEP 440 development versions and retain branch and Git
-provenance. Release tags are immutable, annotated tags and are the source of
-truth for published release versions.
+Published source releases use immutable, annotated tags as the source of truth
+for their versions. Development wheels use PEP 440 development versions.
 
 Accepted release tags are:
 
@@ -23,28 +17,33 @@ vX.Y.Z.postN
 ```
 
 The tag's `X.Y.Z` portion must match the `project(... VERSION X.Y.Z)` value in
-the tagged `CMakeLists.txt`. Configure `v*` as a protected tag pattern in
-GitLab and allow only release maintainers to create it.
+the tagged `CMakeLists.txt`.
 
-Tag pipelines remove branch names, pipeline IDs, development suffixes, and Git
-hashes from published package versions. Native archives retain the OpenUSD,
-Python, and platform dimensions needed to select a compatible binary:
-
-```text
-cae_openusd_plugins@0.1.1+openusd.usd-0.25.11.py312.linux-x86_64.zip
-```
-
-Wheels likewise retain their required runtime dimensions, but omit source
-provenance:
+Published release versions omit branch names, build IDs, development suffixes,
+and Git hashes. Native archives retain the OpenUSD, Python, and platform
+dimensions needed to select a compatible binary:
 
 ```text
-cae_openusd_plugins-0.1.1+usd25.11.py312.usdcore-cp312-cp312-linux_x86_64.whl
+cae_openusd_plugins@0.1.2+openusd.usd-0.25.11.py312.linux-x86_64.zip
 ```
 
-The protected tag pipeline builds and tests every supported matrix entry before
-publishing native packages to Packman and `usd-core` wheels to the internal
-Python index. Both publishers download the published artifact and verify it
-against the build output.
+Combined `usd-core` wheels use the public release version. Python ABI and
+platform remain in the standard wheel tags:
+
+```text
+cae_openusd_plugins-0.1.2-cp312-cp312-win_amd64.whl
+```
+
+Each wheel bundles the four most recent stable `usd-core` releases plus an
+explicit keep-list, initially `25.11`. Overlapping versions are included once.
+The resolved support set is frozen in
+[`cmake/usd-core-support.json`](../cmake/usd-core-support.json) before release;
+rebuilding a tag does not discover new USD versions. A future USD version
+requires a new CAE wheel release. See
+[wheel compatibility](installation.md#wheel-compatibility).
+
+Release validation covers every supported USD version on Linux and Windows,
+including the installed combined wheel in environments without a build SDK.
 
 Never delete, recreate, or force-move a published release tag. Use a patch
 release for source changes and reserve `.postN` releases for packaging or

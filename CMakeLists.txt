@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(cae_openusd_plugins
-    VERSION 0.1.1
+    VERSION 0.1.2
     DESCRIPTION "OpenUSD plugins for CAE schemas and file formats"
     LANGUAGES CXX
 )

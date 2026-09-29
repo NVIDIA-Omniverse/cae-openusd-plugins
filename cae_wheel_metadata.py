@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 import re
 
-_DEFAULT_VERSION = "0.1.1.dev0"
+_DEFAULT_VERSION = "0.1.2.dev0"
 _DEFAULT_DEPENDENCIES = ("numpy", "trimesh")
 
 
@@ -64,7 +64,7 @@ def _dependencies() -> list[str]:
 def _is_pep440_version(version: str) -> bool:
     # Keep this intentionally conservative; CI produces simple public versions
     # plus optional local-version segments like
-    # 0.1.1.dev123+b.topic.usd25.11.py312.usdcore.gabc123.
+    # 0.1.2.dev123+b.topic.usd25.11.py312.usdcore.gabc123.
     return bool(
         re.fullmatch(
             r"[0-9]+(?:\.[0-9]+)*(?:[a-z]+[0-9]+)?"

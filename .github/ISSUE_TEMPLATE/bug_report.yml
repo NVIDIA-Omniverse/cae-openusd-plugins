@@ -14,7 +14,7 @@ body:
     attributes:
       label: CAE OpenUSD Plugins version
       description: Provide the installed package version or source commit.
-      placeholder: "0.1.1 or commit SHA"
+      placeholder: "0.1.2 or commit SHA"
     validations:
       required: true
   - type: textarea

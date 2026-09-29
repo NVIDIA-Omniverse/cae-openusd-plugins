@@ -80,38 +80,45 @@ python -m pytest -m "not integration" tests/python
 
 ## Wheel Smoke Tests
 
-`cmake/ci/test_wheel.cmake` creates a fresh virtual environment, installs a
-selected wheel with normal dependency resolution, validates its private runtime
-layout and dependency metadata, and runs both the repository and benchmark
-pytest suites.
-
-After building a `usd-core` wheel as described in the
-[installation guide](installation.md), run:
+Use a fresh virtual environment to test the wheel independently of the build
+SDK. From the repository root, with build-tree `PYTHONPATH`, loader paths, and
+`PXR_PLUGINPATH_NAME` overrides cleared, run:
 
 ```sh
-cmake -P cmake/ci/setup.cmake
-cmake -DCAE_USD_FLAVOR=usd-core \
-  -DCAE_USD_VERSION=26.05 \
-  -DCAE_WHEEL_PATTERN="wheels/*usdcore*.whl" \
-  -P cmake/ci/test_wheel.cmake
+python -m venv .venv-wheel-test
+. .venv-wheel-test/bin/activate
+python -m pip install /absolute/path/to/<wheel-filename>.whl "usd-core==26.8" pytest
+python -m pytest tests/python/omni_sci -v
 ```
 
-The default artifact root is `ci-artifacts/build/`. Override it with
-`CAE_ARTIFACT_DIR` when the wheel is elsewhere. The pattern must select exactly
-one wheel.
+Substitute the actual wheel filename. On Windows, activate with
+`.venv-wheel-test\Scripts\Activate.ps1` in PowerShell. Select a USD version
+supported by the wheel; for a local single-SDK wheel, use exactly the version
+it was built against. The pytest setup calls `register_usd_plugins()` before
+importing generated schemas. An application-supplied OpenUSD wheel instead
+requires that application's compatible runtime in the test environment.
 
-An `openusd` wheel is tested against the matching Packman runtime. Pull that
-runtime before running the wheel test:
+For a combined release wheel, also run:
 
 ```sh
-cmake -DCAE_SETUP_PACKMAN_VARIANT=usd \
-  -DCAE_USD_VERSION=25.11 \
-  -P cmake/ci/setup.cmake
-cmake -DCAE_USD_FLAVOR=openusd \
-  -DCAE_USD_VERSION=25.11 \
-  -DCAE_WHEEL_PATTERN="wheels/*openusd*.whl" \
-  -P cmake/ci/test_wheel.cmake
+python -m pytest tests/wheel -v
 ```
+
+Repeat in a fresh environment for each version in
+[`usd-core-support.json`](../cmake/usd-core-support.json). These checks require
+the full combined payload and cover lazy selection, idempotent registration,
+all schema/plugin loads, incompatible runtimes, and loaded-library isolation
+on Linux and Windows. Use [CTest](#ctest) for the full configured reader suite,
+including generated integration-test fixtures.
+
+### Portable Linux Wheel Validation
+
+Distributed Linux wheels are audited and repaired for
+`manylinux_2_35_x86_64`. The same final wheel is tested against every supported
+USD on clean Ubuntu 22.04 and Debian 12 environments using independently
+distributed Python runtimes, with no build SDK present. This validates the
+system-library baseline as well as plugin loading. The loaded-library test
+checks that only the selected USD payload is loaded.
 
 ## Documentation Validation
 

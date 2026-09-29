@@ -12,8 +12,8 @@ normalizes differences between OpenUSD distributions and exposes a stable,
 role-based interface to schema and file-format plugin targets.
 
 This page explains that build boundary. For commands and supported dependency
-versions, see [Build](../build.md). For installed artifacts and runtime ABI
-requirements, see [Installation and packaging](../installation.md).
+versions, see [Build from source](../build.md). For installed artifacts and
+runtime ABI requirements, see [Installation](../installation.md).
 
 ## Why `CaeUSD` Exists
 
@@ -140,7 +140,7 @@ This avoids provider-specific shell wrappers and prevents a different
 - A source-built `openusd` artifact expects its compatible host runtime.
 - A `usd-core` wheel variant declares the matching `usd-core` Python package.
 - External dependencies required by enabled readers follow the packaging rules
-  described in [Installation and packaging](../installation.md).
+  described in [Installation](../installation.md).
 
 The runtime registration helper validates the active OpenUSD version before it
 registers the plugin tree.
